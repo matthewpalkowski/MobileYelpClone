@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">HW5_YelpClone</string>
+    <string name="contentDefault">[Enter type of food or type of business]</string>
+    <string name="cityIDDefault">[Enter city or town]</string>
+    <string name="searchButton">SEARCH</string>
+    <string name="reviewCount"> Reviews</string>
+    <string name="milage"> mi</string>
+    <string name="addressDefault">No Address Listed</string>
+    <string name="defaultBusinessType">--</string>
+    <string name="defaultBusinessName">Name Missing</string>
+    <string name="defaultPrice">--</string>
+    <string name="seachTermEmpty">-Search Term cannot be empty. Please enter a search term.</string>
+    <string name="locationEmpty">-Location cannot be empty. Please enter a location.</string>
+    <string name="alertTitle">Required field missing</string>
+</resources>
