@@ -1,5 +1,6 @@
 package com.example.hw5_yelpclone
 
+import android.app.Application
 import android.content.Context
 import android.content.DialogInterface
 import androidx.appcompat.app.AppCompatActivity
@@ -11,12 +12,14 @@ import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import kotlin.system.exitProcess
 
 /**
  * Class that manages the behavior of MainActivity.
@@ -24,40 +27,21 @@ import retrofit2.converter.gson.GsonConverterFactory
  */
 class MainActivity : AppCompatActivity() {
 
-    /* TODO - Requirements
-     *  -Connection to Yelp API to get restaurants and businesses in the area
-     *      -Use Retrofit Web API (add library to manifest)
-     *      -Use GET request with the following base URL https://api.yelp.com/v3/businesses/search
-     *      -See help info at https://www.yelp.com/developers/documentation/v3/business_search
-     *      -Get API Key from https://www.yelp.com/developers/documentation/v3/authentication
-     *  -Show results in a RecyclerView, items should take the following form
-     *      -name
-     *      -image
-     *          -Use Picasso Library to DL image from img url from YELP Web API
-     *      -rating
-     *      -reviews
-     *      -distance from location in miles
-     *      -address
-     *      -Price ($,$$,$$$, etc.)
-     *  -Widgets to take in 'business/food' and location
-     *  -Handle Empty Strings and display alert dialog with the error
-     *  -Hide Keyboard after entering text
+    /* TODO Mark Down extra credit
+     *  -No data available note for price
+     *  -Category validation
      */
 
-    /* TODO - Derived TODOs
-    *   -Set up RecyclerView visibility
-    *   -Check for WIFI
-    *       -Throw error message permission is denied
-    *       -Throw error message when no connection to internet
-    *   -Check for API connection
-    *       -Throw error when connection to API can't be made
-    *   -Parse return from yelp and assign it to elements of recycler view item
-    */
+    //TODO Set up connection to the categories end-point and validate user input against it
+    //FIXME Disallow new line characters in the search boxes
+    //FIXME Look into the max 20 results for any search
 
     private val TAG = "MainActivity"
+
     private val BASE_URL = "https://api.yelp.com/v3/"
-    private val CLIENT_ID = "UB8h9ifG_nTPj3nB6HRSNQ" //TODO maybe delete
+    private val CATEGORY_URL= "https://www.yelp.com/developers/documentation/v3/all_category_list/categories.json/"
     private val API_KEY = "DrzLl84iZlolxCOKKVHXNHD50mrRT-BMxIUz7XiW86URPbRvPclVUNrdzdhAoBxlJ53TZVhqf_l7bvoawN_EmLZt06SZLBbxAVBUm4SVjXI0LyWRh5-FchVBerN8YHYx"
+    private val CLIENT_ID = "UB8h9ifG_nTPj3nB6HRSNQ"
 
     private lateinit var adapter: SearchItemAdapter
 
@@ -70,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var locationEditText: EditText
 
     private lateinit var businessList: ArrayList<Business>
+    private lateinit var categorySet: HashSet<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,11 +62,14 @@ class MainActivity : AppCompatActivity() {
 
         supportActionBar?.hide()
 
-        businessList = ArrayList<Business>()
+        businessList = ArrayList()
+        categorySet = HashSet()
+        retrieveCategories()
 
-        recyclerView = findViewById(R.id.recyclerSearchResults)
         adapter = SearchItemAdapter(businessList)
+        recyclerView = findViewById(R.id.recyclerSearchResults)
         recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
 
         listener = ButtonListener()
         findViewById<Button>(R.id.button)!!.setOnClickListener(listener)
@@ -114,18 +102,24 @@ class MainActivity : AppCompatActivity() {
             locationEditText.setTextColor(ContextCompat.getColor(applicationContext,R.color.black))
     }
 
-    private fun showAlert(alertMessage : String){
+    private fun showAlert(alertMessage : String, terminalPoint: Boolean){
         val builder = AlertDialog.Builder(this)
         builder.setTitle(getString(R.string.alertTitle))
         builder.setMessage(alertMessage)
         builder.setIcon(android.R.drawable.ic_delete)
-        builder.setPositiveButton("OK"){ dialogInterface: DialogInterface, i: Int -> }
+        if(terminalPoint)
+            builder.setPositiveButton(getString(R.string.Ok) ){ _: DialogInterface, _: Int ->
+                exitProcess(-1)}
+        else
+            builder.setPositiveButton(getString(R.string.Ok)){ _: DialogInterface, _: Int -> }
         val dialog = builder.create()
         dialog.show()
     }
 
     private fun submitQuery(content: String, location: String)
     {
+        businessList.clear()
+
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
@@ -133,18 +127,37 @@ class MainActivity : AppCompatActivity() {
 
         val yelpAPI = retrofit.create(IYelpService::class.java)
 
-        //TODO Change content and location to function inputs
-        yelpAPI.getSearchItems("Bearer $API_KEY", "pizza"," New Britain").enqueue(object : Callback<SearchItem> {
+        yelpAPI.getSearchItems("Bearer $API_KEY", content,location).enqueue(object : Callback<SearchItem> {
             override fun onResponse(call: Call<SearchItem>, response: Response<SearchItem>) {
                 businessList.addAll(response.body()!!.businesses)
                 adapter.notifyDataSetChanged()
-                recyclerView.visibility = View.VISIBLE
-                Log.d("test","test")
             }
 
             override fun onFailure(call: Call<SearchItem>, t: Throwable) {
-                //TODO Display alert
-                Log.d(TAG, "onFailure: $t")
+                showAlert(getString(R.string.apiFailureAlert),false)
+            }
+        })
+    }
+
+    private fun retrieveCategories() {
+        val retrofit = Retrofit.Builder()
+                .baseUrl(CATEGORY_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+        val yelpAPI = retrofit.create(IYelpService::class.java)
+
+        yelpAPI.getCategories().enqueue(object : Callback<YelpCatList> {
+            override fun onResponse(call: Call<YelpCatList>, response: Response<YelpCatList>) {
+                if (!response.body()!!.CatList.isNullOrEmpty()) {
+                    for (yelpCat in response.body()!!.CatList)
+                        categorySet.add(yelpCat.title)
+                }
+            }
+
+            override fun onFailure(call: Call<YelpCatList>, t: Throwable) {
+                Log.d(TAG, "onFailure: $t" )
+                showAlert(getString(R.string.categoryFailure),true)
             }
         })
     }
@@ -156,17 +169,17 @@ class MainActivity : AppCompatActivity() {
             val contentEditText : EditText = findViewById(R.id.editTxtContentID)
             val locationEditText : EditText = findViewById(R.id.editTxtLocationID)
 
-            if(contentEditText.text.isEmpty() ||
+            if(contentEditText.text.isBlank() ||
                     contentEditText.text.toString() == getString(R.string.contentDefault))
                 message = getString(R.string.seachTermEmpty)
 
-            if(locationEditText.text.isEmpty() ||
+            if(locationEditText.text.isBlank() ||
                     locationEditText.text.toString() == getString(R.string.cityIDDefault)) {
                 if (message.length > 1) message += "\n\n"
                 message += getString(R.string.locationEmpty)
             }
 
-            if(message.isNotEmpty()) showAlert(message)
+            if(message.isNotBlank()) showAlert(message,false)
 
             else submitQuery(contentEditText.text.toString(),locationEditText.text.toString())
         }
@@ -177,24 +190,18 @@ class MainActivity : AppCompatActivity() {
             val searchText : String = (v as EditText).text.toString()
             if(hasFocus &&
                     ((searchText == getString(R.string.cityIDDefault)) ||
-                            (searchText == getText(R.string.contentDefault)))) {
-                v.text.clear()
-            }
+                            (searchText == getText(R.string.contentDefault))))
+                                v.text.clear()
 
-            if (searchText.isEmpty() && !hasFocus) {
-                if(v.id == findViewById<EditText>(R.id.editTxtContentID).id){
+
+            if (searchText.isBlank() && !hasFocus) {
+                if(v.id == findViewById<EditText>(R.id.editTxtContentID).id)
                     v .setText(getString(R.string.contentDefault))
 
-                }
-
-                if (v.id == findViewById<EditText>(R.id.editTxtLocationID).id){
+                if (v.id == findViewById<EditText>(R.id.editTxtLocationID).id)
                     v.setText(getString(R.string.cityIDDefault))
-
-                }
             }
-
             setTextColor()
         }
-
     }
 }

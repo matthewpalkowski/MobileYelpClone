@@ -12,4 +12,7 @@
     <string name="seachTermEmpty">-Search Term cannot be empty. Please enter a search term.</string>
     <string name="locationEmpty">-Location cannot be empty. Please enter a location.</string>
     <string name="alertTitle">Required field missing</string>
+    <string name="apiFailureAlert">Request to yelp failed.</string>
+    <string name="categoryFailure">Unable to retrieve info from Yelp. App will close.</string>
+    <string name="Ok">OK</string>
 </resources>

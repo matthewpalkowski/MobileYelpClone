@@ -1,6 +1,5 @@
 package com.example.hw5_yelpclone
 
-import android.content.res.Resources
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,12 +8,18 @@ import android.widget.RatingBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.squareup.picasso.Picasso
+import java.util.function.DoubleToLongFunction
 
 /**
  * Adapter class for SearchItem. Assigns values to components of SearchItem.
  */
 class SearchItemAdapter(private val searchItems : List<Business>) :
     RecyclerView.Adapter<SearchItemAdapter.SearchItemViewHolder>() {
+
+    private val DISTANCE_SUFFIX : String = " mi"
+    private val REVIEW_SUFFIX : String = " Reviews"
+    private val NO_DATA : String = "No data available"
+    private val METERS_TO_MILES : Double = 0.000621371
 
     class SearchItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
         var imgBusiness : ImageView = itemView.findViewById(R.id.imgBusinessThumbnail)
@@ -34,24 +39,45 @@ class SearchItemAdapter(private val searchItems : List<Business>) :
 
     override fun onBindViewHolder(holder: SearchItemViewHolder, position: Int) {
         val currentItem = searchItems[position]
+
         val stringBuilder: StringBuilder = StringBuilder()
         stringBuilder.append(currentItem.location.address1)
-        if(currentItem.location.address2.isNotEmpty()) stringBuilder.append("\n" + currentItem.location.address2)
-        if(currentItem.location.address3.isNotEmpty()) stringBuilder.append("\n" + currentItem.location.address3)
         stringBuilder.append("\n" + currentItem.location.city + ", " + currentItem.location.state)
         holder.txtAddress.text = stringBuilder.toString()
+        stringBuilder.clear()
 
-        holder.txtBusinessTitle.text = currentItem.category[0].title //TODO Potentially iterate through all categories?
-        holder.txtBusinessType.text = currentItem.name
+        holder.txtDistance.text = formatDistance(currentItem.distance)
 
-        (currentItem.distance.toString() + " " + Resources.getSystem()
-            .getString((R.string.milage))).also { holder.txtDistance.text = it }
-        holder.txtPrice.text = currentItem.price
-        Picasso.get().load(currentItem.image_url).into(holder.imgBusiness)
-        (currentItem.review_count.toString() + " " +
-                Resources.getSystem().getString((R.string.reviewCount))).also { holder.txtReviewTotal.text = it }
+        for(category in currentItem.categories){
+            stringBuilder.append(category.title)
+            if(category != currentItem.categories.last()) stringBuilder.append(", ")
+        }
+        holder.txtBusinessType.text = stringBuilder.toString()
+
+        holder.txtBusinessTitle.text = currentItem.name
+
+
+        if(!currentItem.price.isNullOrBlank()) holder.txtPrice.text = currentItem.price
+        else holder.txtPrice.text = NO_DATA
+
+        if(!currentItem.price.isNullOrBlank())
+            Picasso.get().load(currentItem.image_url).into(holder.imgBusiness)
+        else holder.imgBusiness.setImageResource(R.drawable.no_image_available)
+
+        holder.txtReviewTotal.text = currentItem.review_count.toString() + REVIEW_SUFFIX
+
         holder.rtgContentRating.rating = currentItem.rating.toFloat()
     }
 
     override fun getItemCount(): Int { return searchItems.size}
+
+    private fun formatDistance(meterDistance : Double?) : String{
+        var formattedDistance : String
+        if (meterDistance == null) formattedDistance = NO_DATA
+        else{
+            var mileDistance : Double = meterDistance * METERS_TO_MILES
+            formattedDistance = String.format("%.2f",mileDistance) + DISTANCE_SUFFIX
+        }
+        return formattedDistance
+    }
 }

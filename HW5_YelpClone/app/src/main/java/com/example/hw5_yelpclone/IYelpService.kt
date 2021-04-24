@@ -12,4 +12,6 @@ interface IYelpService {
                        @Query("term")content:String,
                        @Query("location")location:String) : Call<SearchItem>
 
+    @GET(".")
+    fun getCategories() : Call<YelpCatList>
 }
