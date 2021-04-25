@@ -15,4 +15,5 @@
     <string name="apiFailureAlert">Request to yelp failed.</string>
     <string name="categoryFailure">Unable to retrieve info from Yelp. App will close.</string>
     <string name="Ok">OK</string>
+    <string name="no_results">No results</string>
 </resources>

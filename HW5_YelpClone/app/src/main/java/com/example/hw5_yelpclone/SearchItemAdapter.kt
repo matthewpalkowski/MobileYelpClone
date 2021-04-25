@@ -8,7 +8,6 @@ import android.widget.RatingBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.squareup.picasso.Picasso
-import java.util.function.DoubleToLongFunction
 
 /**
  * Adapter class for SearchItem. Assigns values to components of SearchItem.
@@ -72,10 +71,9 @@ class SearchItemAdapter(private val searchItems : List<Business>) :
     override fun getItemCount(): Int { return searchItems.size}
 
     private fun formatDistance(meterDistance : Double?) : String{
-        var formattedDistance : String
-        if (meterDistance == null) formattedDistance = NO_DATA
-        else{
-            var mileDistance : Double = meterDistance * METERS_TO_MILES
+        var formattedDistance : String = NO_DATA
+        if (meterDistance != null) {
+            val mileDistance : Double = meterDistance * METERS_TO_MILES
             formattedDistance = String.format("%.2f",mileDistance) + DISTANCE_SUFFIX
         }
         return formattedDistance
